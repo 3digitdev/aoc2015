@@ -4,19 +4,83 @@ mod present;
 mod delivery;
 
 use floor::Floor;
-use std::{fs, fmt};
+use std::{fs, fmt, cmp};
 use crate::instructions::Instructions;
 use crate::present::Present;
 use crate::delivery::Santa;
 use md5;
 use fancy_regex::Regex;
+use std::cmp::{min, max};
+use std::borrow::Borrow;
 
 fn main() {
     // day_1();
     // day_2();
     // day_3();
     // day_4();
-    day_5();
+    // day_5();
+    day_6();
+}
+
+fn d6p1(cmd: &str) -> fn(&bool) -> bool {
+    match cmd {
+        "turn on" => |_: &bool| true,
+        "turn off" => |_: &bool| false,
+        "toggle" => |x: &bool| !x,
+        _ => |x: &bool| *x,
+    }
+}
+
+fn d6p2(cmd: &str) -> fn(&i32) -> i32 {
+    match cmd {
+        "turn on" => |x: &i32| x + 1,
+        "turn off" => |x: &i32| max(x - 1, 0),
+        "toggle" => |x: &i32| x + 2,
+        _ => |x: &i32| *x,
+    }
+}
+
+fn read_instructions<T>(grid: &mut [[T; 1000]; 1000], f: fn(&str) -> fn(&T) -> T) {
+    let lines = fs::read_to_string("inputs/6-1.txt").unwrap();
+    let inst_re = Regex::new(
+        r"(?<cmd>turn on|toggle|turn off) (?<sx>\d+),(?<sy>\d+) through (?<ex>\d+),(?<ey>\d+)"
+    ).unwrap();
+    for instruction in lines.split('\n') {
+        let groups = inst_re.captures(&instruction).unwrap().unwrap();
+        let cmd = groups.name(&"cmd").unwrap().as_str();
+        let sx: usize = groups.name(&"sx").unwrap().as_str().parse().unwrap();
+        let sy: usize = groups.name(&"sy").unwrap().as_str().parse().unwrap();
+        let ex: usize = groups.name(&"ex").unwrap().as_str().parse().unwrap();
+        let ey: usize = groups.name(&"ey").unwrap().as_str().parse().unwrap();
+        for x in min(sx, ex)..=max(sx, ex) {
+            for y in min(sy, ey)..=max(sy, ey) {
+                grid[x][y] = f(cmd)(&grid[x][y]);
+            }
+        }
+    }
+}
+
+fn day_6() {
+    // Part 1
+    let mut p1_grid = [[false; 1000]; 1000];
+    read_instructions(&mut p1_grid, d6p1);
+    let mut on = 0;
+    for x in &p1_grid {
+        for y in x {
+            if *y { on += 1 }
+        }
+    }
+    println!("THERE ARE {} LIGHTS", on);
+    // Part 2
+    let mut p2_grid = [[0; 1000]; 1000];
+    read_instructions(&mut p2_grid, d6p2);
+    let mut bright = 0;
+    for x in &p2_grid {
+        for y in x {
+            bright += *y;
+        }
+    }
+    println!("The lights have a brightness total of {}", bright);
 }
 
 fn day_5() {
